@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FFEOE · Elección de empresa</title>
+  <style>
+/*
+ * Paleta verde institucional, tema claro unico.
+ *
+ * La aplicacion ocupa la ventana entera: cabecera y pestanas arriba, y debajo
+ * una zona de contenido que se estira y se desplaza por dentro. Antes cada
+ * bloque ponia su propio tope de altura y se estorbaban entre ellos.
+ */
+:root{
+  --fondo:#F3F5F2; --papel:#FFFFFF; --papel-2:#E9EDE9;
+  --tinta:#18201B; --tinta-2:#4B554E; --tinta-3:#5A645B;
+  --linea:#D3DAD3; --linea-2:#B3BEB4;
+  /* Borde de lo que se rellena o se pulsa: 3,3:1 sobre blanco (WCAG 1.4.11).
+     --linea-2 se queda para separadores, que no necesitan ese contraste. */
+  --linea-control:#86918A;
+  /* Cada color tiene un solo trabajo (estudio de color, 29-9-2026). */
+  /* Marca e interaccion: estructura, lo que se pulsa y lo elegido. */
+  --marca:#1B6B4A; --marca-oscuro:#124E36; --marca-suave:#E2EFE7;
+  --sobre-relleno:#FFFFFF;          /* texto sobre un relleno de color */
+  --fila-resalte:#EEF1EE;           /* fila bajo el raton: neutro, no un estado */
+  /* Estados: cinco y no mas. Siempre con icono y texto (.est). */
+  --ok:#1B6B4A; --ok-fondo:#E2EFE7; --ok-borde:#A9CDB8;
+  --atencion:#8A5A10; --atencion-fondo:#F7EDD9; --atencion-borde:#E2C48F;
+  --bloqueo:#96322A; --bloqueo-fondo:#F6E3E0; --bloqueo-oscuro:#7A2821;
+  --info:#1F5673; --info-fondo:#E3EDF3; --info-borde:#A9C4D5;
+  --neutro:#4B554E;
+  /* Atributo: PRL. Azul de obligacion (ISO 7010), lejos de los cinco estados. */
+  --prl:#3F54A6; --prl-fondo:#E8EBF7; --prl-borde:#B7C0E6;
+  /* Orden: 1.o y 2.o curso, un matiz en dos tonos. */
+  --orden-1:#557591; --orden-2:#3E5A70;
+  /* Identidad de ciclo: franja junto a las siglas, nunca un relleno. Orden
+     fijo de la aplicacion; validado para daltonismo entre contiguos. */
+  --ciclo-1:#C87E00; --ciclo-2:#2A78D6; --ciclo-3:#00A470; --ciclo-4:#4A3AA7; --ciclo-5:#D86D96;
+  --estrella:#B58400;             /* 3,4:1 sobre blanco; la de antes, 2,2 */
+  /* Zonas de lectura de la tabla de asignacion. */
+  --zona-req:rgba(31,86,115,.06); --zona-req-cab:rgba(31,86,115,.12);
+  --zona-asig:rgba(27,107,74,.06); --zona-asig-cab:rgba(27,107,74,.14);
+  /* Nombres antiguos, mientras quedan reglas que los usan. Lo nuevo va con
+     los de arriba. */
+  --verde:var(--marca); --verde-oscuro:var(--marca-oscuro); --verde-claro:var(--marca-suave);
+  --ambar:var(--atencion); --ambar-claro:var(--atencion-fondo);
+  --rojo:var(--bloqueo); --rojo-claro:var(--bloqueo-fondo);
+  --azul:var(--info); --azul-claro:var(--info-fondo);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;padding:0}
+body{background:var(--fondo);color:var(--tinta);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  -webkit-text-size-adjust:100%}
+.oculto{display:none!important}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* ------------------------------------------------------------- arranque */
+.pantalla{min-height:80vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;text-align:center;padding:30px}
+.pantalla h1{font-size:23px;margin:0}
+.pantalla p{font-size:16px;color:var(--tinta-2);max-width:520px;margin:0}
+.giro{width:28px;height:28px;border:3px solid var(--linea);border-top-color:var(--verde);
+  border-radius:50%;animation:g 1s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.giro{animation:none}}
+
+/* Texto de estado suelto (fuera de una etiqueta): el JS lo pone en cifras,
+   celdas y avisos cortos. Sin estas reglas no pintaba nada. */
+span.rojo,td.num.rojo,td.num.ajustado.rojo{color:var(--rojo);font-weight:600}
+td.num.ambar,td.num.ajustado.ambar{color:var(--ambar);font-weight:600}
+select.rojo{color:var(--rojo);border-bottom-color:var(--rojo)}
+.v.confirmadas{color:var(--verde)}
+.v.posibles{color:var(--ambar)}
+/* PRL del alumno: «No» es un bloqueo, en rojo; antes salia verde como «Sí». */
+.ciclo-chip.puesto.rojo{background:var(--rojo);border-color:var(--rojo);color:var(--sobre-relleno)}
+
+/* ---------------------------------------------------------------- armazon */
+#app{height:100%;display:flex;flex-direction:column}
+.cabecera{background:var(--verde);color:var(--sobre-relleno);padding:9px 20px;flex:none;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px}
+@media (max-width:720px){.cabecera{grid-template-columns:1fr}}
+.cab-persona{font-size:16px;font-weight:700;line-height:1.2}
+.cab-rol{font-size:13px;opacity:.9}
+.cab-centro{font-size:19px;font-weight:700;letter-spacing:.14em;text-align:center}
+.fecha-grupo{font-size:12.5px;padding:3px 6px;min-width:auto}
+.cab-der{font-size:12.5px;opacity:.85;text-align:right;line-height:1.35}
+.cab-ayuda{margin-top:4px;background:none;border:1px solid currentColor;color:inherit;border-radius:12px;
+  padding:1px 10px;font:inherit;font-size:12px;cursor:pointer}
+.cab-ayuda:hover{background:rgba(255,255,255,.15)}
+/* «Primeros pasos»: la pantalla se oscurece salvo lo que se explica, con un cuadro al lado. */
+.tour{position:fixed;inset:0;z-index:100}
+.tour-foco{position:fixed;border-radius:6px;box-shadow:0 0 0 9999px rgba(20,28,24,.55);outline:3px solid var(--ambar);
+  outline-offset:2px;pointer-events:none;transition:top .2s,left .2s,width .2s,height .2s}
+.tour-foco.centro{top:50%;left:50%;width:0;height:0;outline:none}
+.tour-cuadro{position:fixed;background:var(--papel);color:var(--tinta);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.3);
+  padding:14px 18px 12px;width:min(440px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto}
+.tour-paso{font-size:11.5px;color:var(--tinta-3);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.tour-cuadro h3{margin:4px 0 8px;font-size:17px;color:var(--verde)}
+.tour-cuadro p{margin:0 0 8px;font-size:14px;line-height:1.5}
+.tour-importante{background:var(--atencion-fondo);border-left:3px solid var(--ambar);border-radius:4px;padding:7px 10px;
+  margin:8px 0;font-size:13.5px;line-height:1.45}
+.tour-botones{display:flex;gap:8px;align-items:center;margin-top:12px}
+.tour-botones span{flex:1}
+@media (max-width:720px){.cab-centro,.cab-der{text-align:left}}
+
+/* La nota de la empresa: cinco estrellas y nada escrito al lado.
+   No se pulsan —se valora contestando el formulario del tutor dual—, así que
+   no son botones ni lo parecen. */
+.estrellas{display:flex;align-items:center;gap:8px}
+.puntuacion{display:inline-flex;gap:1px;white-space:nowrap;line-height:1}
+.puntuacion .pico{font-size:19px;line-height:1;color:var(--linea-control)}
+.puntuacion .pico.puesta{color:var(--estrella)}
+/* En las tablas, más pequeñas: cinco por fila y muchas filas. */
+.puntuacion.chica .pico{font-size:14px}
+/* Sin valorar no es un cero: un cero es un juicio y esto es no haber mirado.
+   Se distingue por el tono, no por una palabra al lado. */
+.puntuacion.sin-valorar .pico{opacity:.35}
+
+/* El "+" que abre el historial. Discreto: es un "¿por qué?", no una acción. */
+.mas{background:none;border:1px solid var(--linea);color:var(--tinta-3);
+  cursor:pointer;font-family:inherit;font-size:13px;line-height:1;
+  width:18px;height:18px;border-radius:4px;padding:0;flex:none}
+.mas:hover{border-color:var(--tinta-3);color:var(--tinta)}
+
+/* El historial: una valoración por bloque, la más nueva arriba. */
+.historial{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.historial .registro{border-left:2px solid var(--linea);padding:2px 0 2px 10px}
+.historial .cabeza{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.historial .cabeza b{font-size:13px}
+.historial .criterios{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+/* Contestado que sí, que no, o sin contestar: tres estados, no dos. Un
+   criterio que nadie miró no es un criterio que se incumple. */
+.crit{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--linea)}
+.crit.si{background:var(--verde-claro);border-color:var(--verde);color:var(--verde)}
+.crit.no{color:var(--tinta-3);text-decoration:line-through}
+.crit.ni{color:var(--tinta-3);opacity:.55}
+.historial .dicho{margin-top:4px}
+/* Lo que contó el tutor, tal cual. Se lee, no se edita: lo escribe quien
+   estuvo allí, desde su formulario. */
+.dicho{font-size:12.5px;color:var(--tinta-2);line-height:1.45;white-space:pre-wrap}
+.dicho.vacio{color:var(--tinta-3);font-style:italic}
+tr.desplegada > td{background:var(--papel-2);padding:4px 10px 10px}
+/* La columna que desempata: se marca, pero menos que la que manda. */
+th.segunda{opacity:.75}
+/* Una fila que sigue en la tabla pero ya no cuenta: profesorado de baja,
+   alumnado que no va a salir. Se lee, pero se ve que esta fuera. */
+/* Sin opacidad: con ella el texto bajaba a 3,8:1 y las etiquetas a 2,5:1.
+   El texto pasa a tinta-3 y las etiquetas conservan su contraste. */
+tr.apagada td{color:var(--tinta-3)}
+/* Ficha del alumno: su orden de empresas, en dos columnas para que no ocupe media ficha. */
+.lista-preferencias{margin:0 0 4px;padding-left:26px;columns:2;column-gap:28px;font-size:14px}
+.lista-preferencias li{margin:2px 0;break-inside:avoid}
+.lista-preferencias li.apagada{color:var(--tinta-3)}
+/* Profesorado: una linea por persona. Los roles son chips cortos que se
+   pulsan; lo que da y tutoriza, chips pequenos; nada envuelve si no hace falta. */
+.tabla-profesorado td{padding-top:6px;padding-bottom:6px;vertical-align:middle}
+.tabla-profesorado .inic{font-weight:700;color:var(--verde);font-variant-numeric:tabular-nums}
+.tabla-profesorado .correo{font-size:12px;color:var(--tinta-3);white-space:nowrap}
+.tabla-profesorado .centro{text-align:center}
+.tabla-profesorado .imparte{display:flex;flex-wrap:wrap;gap:3px;align-items:center;max-width:420px}
+.tabla-profesorado .imparte .et{white-space:nowrap}
+.tabla-profesorado .imparte .quitar{font-size:12px;line-height:1;padding:0 2px;margin-left:2px}
+.tabla-profesorado .mas{font-size:11px;line-height:18px;padding:0 6px}
+.tabla-profesorado select.sust{margin-top:3px;font-size:12px;max-width:170px}
+/* La lista de alumnado, como la de empresas: la columna de quitar solo existe en ese modo. */
+.quitar-col{width:0;padding:0}
+/* Un bloque que se pliega: la cabecera se pulsa y la flecha dice como esta. */
+.cab-bloque.plegable{cursor:pointer;user-select:none}
+.cab-bloque.plegable h2::before{content:'▾';display:inline-block;width:16px;color:var(--tinta-3);font-size:12px}
+.cab-bloque.plegable.plegado h2::before{content:'▸'}
+/* Casos especiales: una tarjeta por caso, en fila. La puesta va llena; la que
+   detecta la aplicacion, punteada; la de "solo proyecto" es aparte y azul. */
+.casos{display:flex;flex-wrap:wrap;gap:4px}
+.caso{border:1px solid var(--linea);border-radius:6px;padding:3px 9px;font-size:11.5px;
+  background:var(--papel);color:var(--tinta-2);cursor:pointer;white-space:nowrap;line-height:1.3}
+.caso:hover{border-color:var(--verde);color:var(--verde)}
+.caso.puesto{background:var(--rojo-claro);border-color:var(--rojo);color:var(--rojo);font-weight:600}
+.caso.puesto.realiza{background:var(--verde-claro);border-color:var(--verde);color:var(--verde-oscuro)}
+.caso.detectado{border-style:dashed}
+.caso.detectado::after{content:' · detectado';font-weight:400;opacity:.75}
+.caso.proyecto{margin-left:8px}
+.caso.proyecto.puesto{background:var(--azul-claro);border-color:var(--azul);color:var(--azul)}
+.tabla-casos td{vertical-align:middle}
+/* En la cabecera de la ficha, los dos desplegables de asignacion. */
+/* La cabecera del alumno tiene tres columnas: nombre, asignacion y situacion.
+   La asignacion va en medio, en el hueco que quedaba, uno encima del otro. */
+#panel-alumno .ficha-cab{grid-template-columns:1fr auto auto}
+.ficha-cab .asignar-cab{display:flex;flex-direction:column;gap:6px;justify-self:center}
+.ficha-cab .asignar-cab label{font-size:11.5px;color:var(--tinta-2);display:grid;grid-template-columns:78px 1fr;align-items:center;gap:6px}
+.ficha-cab .asignar-cab select{width:280px;max-width:100%;font-size:12px}
+@media (max-width:1000px){#panel-alumno .ficha-cab{grid-template-columns:1fr}.ficha-cab .asignar-cab{justify-self:start}}
+/* ---------------------------------------- Cursos › Planes de formacion inicial
+   Catalogo a la izquierda (se elige una fila) y contenido del plan a la
+   derecha, mas ancho porque es texto. En pantalla estrecha, uno debajo. */
+/* Una columna: el catálogo (ya filtrado por ciclo, son una o dos filas) arriba y el plan debajo, a todo lo ancho. */
+.planes-rejilla{display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-items:start}
+tr.elegible{cursor:pointer}
+tr.elegible:hover td{background:var(--papel-2)}
+tr.elegible.activo td{background:var(--verde-claro)}
+tr.elegible.activo td:first-child{box-shadow:inset 3px 0 0 var(--verde)}
+.plan-cab{margin-bottom:10px}
+.plan-cab h2{font-size:16px;margin:0}
+.plan-cifras{display:flex;gap:16px;margin-top:4px;font-size:13px;color:var(--tinta-2)}
+.plan-cifras strong{color:var(--verde);font-size:15px}
+.plan-actividad{border:1px solid var(--linea);border-radius:8px;margin:6px 0;background:var(--papel)}
+.plan-actividad > summary{cursor:pointer;padding:8px 12px;display:flex;justify-content:space-between;
+  align-items:baseline;gap:12px;list-style:none}
+.plan-actividad > summary::-webkit-details-marker{display:none}
+.plan-actividad > summary .t{font-weight:700;font-size:14px}
+.plan-actividad > summary .t::before{content:'▸';display:inline-block;width:16px;color:var(--tinta-3);font-size:12px}
+.plan-actividad[open] > summary .t::before{content:'▾'}
+.plan-actividad > summary .pie{flex:none;white-space:nowrap}
+.plan-actividad[open] > summary{border-bottom:1px solid var(--linea)}
+.plan-modulo{padding:8px 12px 4px}
+.plan-modulo + .plan-modulo{border-top:1px dashed var(--linea)}
+.plan-modulo-nombre{font-weight:700;font-size:13px;color:var(--verde-oscuro);margin-bottom:4px}
+
+/* ------------------------------------ Asignación › Planificación de la FFEOE
+   Una fila por grupo: nombre y horas a la izquierda, y la barra sobre los
+   meses. 2.º en verde, 1.º en azul; entre cursos, un poco de aire. */
+.plan-gantt{background:var(--papel);border:1px solid var(--linea);border-radius:8px;padding:6px 14px 10px}
+.plan-fila{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:12px;min-height:34px}
+.plan-seccion{font-size:11px;font-weight:700;color:var(--tinta-3);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 2px}
+.plan-seccion.separada{margin-top:10px;padding-top:10px;border-top:1px dashed var(--linea)}
+tr.fila-seccion td{background:var(--papel-2);font-size:11px;font-weight:700;color:var(--tinta-2);
+  text-transform:uppercase;letter-spacing:.05em;padding-top:5px;padding-bottom:5px}
+/* Seguimiento › Por alumno: encima de cada grupo, su tutor/a y su comprobación. */
+tr.fila-grupo td{background:var(--papel-2);font-size:13px;padding-top:6px;padding-bottom:6px}
+/* Seguimiento › Resumen: el periodo manda sobre la fase, y lo finalizado se apaga. */
+tr.fila-periodo td{background:var(--verde);color:var(--sobre-relleno);font-size:12.5px;font-weight:700;letter-spacing:.03em;
+  padding-top:6px;padding-bottom:6px}
+tr.tarea-finalizada td{color:var(--tinta-3);background:var(--papel-2)}
+.tarea-comentario{margin:2px 0 0;white-space:normal}
+.plan-grupo{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plan-grupo .pie{font-size:12px;margin:0}
+.plan-grupo .rojo{font-size:12px}
+.plan-pista{position:relative;height:28px}
+.plan-cabecera{min-height:26px;border-bottom:1px solid var(--linea);margin-bottom:6px}
+.plan-cabecera .plan-pista{height:24px}
+.plan-mes{position:absolute;top:0;bottom:0;border-left:1px solid var(--linea);padding-left:6px;
+  font-size:11px;font-weight:700;color:var(--tinta-3);text-transform:uppercase;letter-spacing:.04em;line-height:24px;
+  white-space:nowrap;overflow:hidden}
+.plan-barra{position:absolute;top:3px;bottom:3px;border-radius:5px;color:var(--sobre-relleno);font-size:12px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;padding:0 8px;overflow:hidden;min-width:6px}
+.plan-barra span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plan-barra.c2{background:var(--orden-2)}
+.plan-barra.c1{background:var(--orden-1)}
+/* El texto de una barra corta, con el color de su barra y en blanco, como en las largas. */
+.plan-fuera.c1{background:var(--orden-1);color:var(--sobre-relleno)}
+.plan-fuera.c2{background:var(--orden-2);color:var(--sobre-relleno)}
+.plan-fuera{position:absolute;top:50%;margin-top:-10px;height:20px;display:flex;align-items:center;font-size:12px;font-weight:600;
+  white-space:nowrap;color:var(--tinta);background:color-mix(in srgb,var(--papel) 88%,transparent);border-radius:4px;padding:0 6px;
+  pointer-events:none}
+.plan-sin{position:absolute;top:0;bottom:0;left:0;display:flex;align-items:center;font-size:12px;color:var(--tinta-3);font-style:italic}
+.plan-hoy{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2px dashed var(--rojo);opacity:.55}
+/* Una pantalla con dos partes (Planes de formación inicial): cada una con su título y plegable. */
+.seccion-pagina{margin:0 0 22px}
+.seccion-pagina > summary{cursor:pointer;list-style:none;font-size:18px;font-weight:700;color:var(--tinta);
+  padding:6px 0 8px;margin-bottom:10px;border-bottom:2px solid var(--linea)}
+.seccion-pagina > summary::-webkit-details-marker{display:none}
+.seccion-pagina > summary::before{content:'▾';display:inline-block;width:18px;color:var(--tinta-3);font-size:13px}
+.seccion-pagina:not([open]) > summary::before{content:'▸'}
+/* Asignación › Reparto por profesorado: el profesorado en chips, su ficha al
+   pulsar, y un bloque por grupo como en Reparto por grupos. */
+#repprof-chips{margin-bottom:10px}
+.repprof-ficha{background:var(--papel);border:1px solid var(--verde);border-radius:8px;padding:10px 14px;margin-bottom:6px}
+.repprof-ficha h2{font-size:16px}
+.repprof-resumen{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:13px;color:var(--tinta-2);margin:6px 0 10px}
+.repprof-resumen strong{font-size:17px;color:var(--tinta)}
+.repprof-form{margin-left:auto}
+.repprof-sub{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--tinta-3);margin:12px 0 4px}
+#repprof-grupos .cab-bloque{align-items:baseline}
+#repprof-grupos .cab-bloque h2{font-size:16px;margin:0}
+#repprof-grupos .cab-bloque .pie{margin:0}
+#repprof-grupos td.num{white-space:nowrap}
+.segprof-detalle > td{background:var(--papel-2);padding:8px 14px 12px}
+.segprof-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 24px}
+.segprof-cols ul{margin:0;padding-left:18px;font-size:13.5px}
+.segprof-cols li{margin:2px 0}
+.segprof-cols .pie{margin:0}
+.repprof-seccion{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tinta-3);margin:14px 0 6px}
+.plan-pendientes{border:1px solid var(--ambar);background:var(--ambar-claro);border-radius:8px;padding:10px 12px;margin:0 0 12px}
+.plan-pendientes table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+.plan-pendientes td{padding:5px 6px;border-top:1px solid var(--atencion-borde);vertical-align:top;background:transparent}
+.plan-pendientes .pie{margin:0}
+
+/* Cursos › Calendario: los dias de la semana, uno por boton. */
+.dias-semana{display:inline-flex;gap:3px}
+.dia-boton{width:28px;height:28px;border-radius:50%;border:1px solid var(--linea-2);background:var(--papel);
+  color:var(--tinta-3);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;padding:0}
+.dia-boton:hover{border-color:var(--verde);color:var(--verde)}
+.dia-boton.puesto{background:var(--verde);border-color:var(--verde);color:var(--sobre-relleno)}
+
+/* ---------------------------------------------------- Cursos › RA y CE
+   Se lee por zonas: el modulo es una tarjeta plegable con su resumen en la
+   cabecera; dentro, cada RA con su numero y una franja a la izquierda (ambar
+   si lleva PRL); los criterios que van a la empresa, en verde suave. */
+.race-cajas{max-width:720px}
+/* Seis cajitas en una fila: la letra se encoge lo que haga falta; en pantalla estrecha, de tres en tres. */
+.cifras.tres.seis{grid-template-columns:repeat(6,minmax(0,1fr));max-width:none;gap:8px}
+.cifras.tres.seis .cifra{padding:6px 8px}
+.cifras.tres.seis .cifra .v,.cifras.tres.seis .cifra .par .v{font-size:17px}
+.cifras.tres.seis .cifra .rot{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cifras.tres.seis .cifra .par{gap:6px}
+@media (max-width:900px){.cifras.tres.seis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* El enlace del tutor/a de grupo: solo la sesión de su ciclo. */
+.modo-tutor nav.fases,.modo-tutor nav.pestanas,.modo-tutor #as-ciclos,.modo-tutor .cab-ayuda{display:none}
+/* Pestañas de las páginas del profesorado (cupo, alumnado del grupo); en la sesión
+   del tutor/a de grupo, las de la página del alumnado, que son enlaces. */
+.grupos-pest{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:flex-end;border-bottom:1px solid var(--linea-2);margin:0 0 14px}
+.grupos-pest .seccion{display:flex;flex-direction:column;gap:2px}
+.grupos-pest .seccion > span{font-size:11px;font-weight:700;color:var(--tinta-3);text-transform:uppercase;letter-spacing:.04em}
+.grupos-pest .seccion > div{display:flex;flex-wrap:wrap;gap:2px}
+.grupos-pest button,.grupos-pest a{background:none;border:none;border-bottom:2px solid transparent;padding:6px 10px;font:inherit;
+font-size:14px;font-weight:600;color:var(--tinta-2);cursor:pointer;white-space:nowrap;text-decoration:none}
+.grupos-pest button.mio{color:var(--verde)}
+.grupos-pest button.mio::after{content:'●';font-size:8px;vertical-align:super;margin-left:3px}
+.grupos-pest button.activa{color:var(--tinta);border-bottom-color:var(--verde);background:var(--papel)}
+.grupos-pest a:hover{color:var(--tinta)}
+.prl-grupo{font-size:12.5px;line-height:1.45}
+.prl-grupo .prl-mod{white-space:nowrap}
+.cifra.empresa{border-color:var(--verde);background:var(--verde-claro)}
+.cifra.empresa .v{color:var(--verde)}
+.cifra.prl{border-color:var(--prl);background:var(--prl-fondo)}
+.cifra.prl .v{color:var(--prl)}
+.race-modulo{border:1px solid var(--linea);border-radius:8px;background:var(--papel);margin:0 0 8px}
+.race-modulo > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;padding:9px 14px}
+.race-modulo > summary::-webkit-details-marker{display:none}
+.race-modulo > summary:hover{background:var(--papel-2);border-radius:8px}
+.race-modulo[open] > summary{border-bottom:1px solid var(--linea);border-radius:8px 8px 0 0}
+.race-siglas{flex:none;min-width:58px;text-align:center;font-weight:700;font-size:12.5px;color:var(--sobre-relleno);
+  background:var(--verde);border-radius:5px;padding:2px 7px}
+.race-mod-nombre{flex:1;min-width:0;font-weight:600;font-size:14.5px}
+.race-titular{display:block;font-weight:400;font-size:12.5px;color:var(--tinta-2);margin-top:1px}
+.race-titular .pie{font-size:12px;margin:0}
+.race-mod-datos{flex:none;display:flex;align-items:center;gap:10px}
+.race-barra{display:inline-block;width:90px;height:8px;border-radius:4px;background:var(--papel-2);overflow:hidden}
+.race-barra > span{display:block;height:100%;background:var(--verde)}
+.race-empresa-n{font-weight:700;color:var(--verde);font-variant-numeric:tabular-nums;min-width:98px;white-space:nowrap}
+.race-empresa-n span{font-weight:600;font-size:12px}
+.race-mod-datos .pie{line-height:1;margin:0}
+.plan-periodos{font-size:13px;white-space:nowrap}
+.plan-periodos .pie{font-size:12px}
+/* El curso en vigor: cuatro cajitas en una fila, pequenas. */
+.cifras.cuatro{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.cifras.cuatro .cifra{padding:8px 10px;min-width:0}
+.cifras.cuatro .cifra .v{font-size:22px}
+.cifras.cuatro .cifra .pie{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:760px){.race-mod-datos .pie,.race-barra{display:none}}
+.race-modulo > .race-ra{margin:10px 14px}
+/* Lo que no se dualiza se ve, pero apagado y sin desplegar. */
+.race-modulo.no-dual{background:var(--papel-2);color:var(--tinta-3)}
+.race-modulo.no-dual .race-sin-dual{display:flex;align-items:center;gap:12px;padding:9px 14px}
+.race-modulo.no-dual .race-mod-nombre{color:var(--tinta-2)}
+.race-modulo.no-dual .race-siglas{background:var(--papel);color:var(--tinta-2);border:1px solid var(--linea-control)}
+.race-ra{border-left:4px solid var(--linea-2);padding:2px 0 2px 12px;margin:8px 0}
+.race-ra.empresa{border-left-color:var(--verde)}
+.race-ra.prl{border-left-color:var(--prl)}
+.race-ra-cab{display:flex;align-items:flex-start;gap:10px}
+.race-num{flex:none;font-weight:700;font-size:12px;color:var(--verde-oscuro);background:var(--verde-claro);
+  border-radius:4px;padding:1px 7px;margin-top:2px;white-space:nowrap}
+.race-ra.prl .race-num{color:var(--prl);background:var(--prl-fondo)}
+.race-ra-texto{flex:1;min-width:0;font-weight:600;font-size:14px;line-height:1.45}
+.race-ra-marcas{flex:none;display:flex;gap:5px;margin-top:2px}
+.race-ces{list-style:none;margin:6px 0 0;padding:0}
+.race-ces li{display:flex;align-items:flex-start;gap:8px;padding:3px 8px;border-radius:4px;font-size:13.5px;
+  line-height:1.45;color:var(--tinta-2)}
+.race-ces li.empresa{background:var(--verde-claro);color:var(--tinta)}
+.race-letra{flex:none;width:18px;font-weight:700;color:var(--tinta-3)}
+.race-ces li.empresa .race-letra{color:var(--verde)}
+.race-ces li > span:nth-child(2){flex:1;min-width:0}
+.race-col{flex:none;width:74px;text-align:center;font-weight:700;font-size:15px;line-height:1.3}
+.race-col.dual{color:var(--verde)}
+.race-col.prl{color:var(--prl)}
+.race-ces li.race-ces-cab{padding-top:0;padding-bottom:2px;font-size:11px;font-weight:700;color:var(--tinta-3);
+  text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--linea);border-radius:0;margin-bottom:2px}
+.race-ces li.race-ces-cab .race-col{font-size:11px;line-height:1.45}
+/* Casilla para horas: tres cifras caben. */
+.mini-num.horas{width:64px}
+/* La ficha del alumno: el contenido no toca los bordes de la caja. */
+#panel-alumno .ficha > .subseccion,#panel-alumno .ficha > .botones{margin-left:16px;margin-right:16px}
+#panel-alumno .ficha > .botones{margin-bottom:14px}
+#panel-alumno .ficha .subseccion .tabla-caja{margin-top:6px}
+/* Fichas del alumno y de la empresa (4-11-2026, «se ve todo muy nubloso»):
+   cada apartado con un título que se encuentra de un vistazo (tamaño de
+   lectura, tinta oscura y una franja de color), más aire entre apartados, y
+   etiquetas y datos de la cabecera en tinta legible en vez de gris claro.
+   En la de empresa los apartados van dentro de sus dos columnas, y el título
+   de cada columna sube un punto por encima de los de apartado. */
+#panel-alumno .ficha > .subseccion,
+#panel-ficha .ficha .columna > .subseccion{margin-top:22px;padding-top:16px;border-top:1px solid var(--linea-2)}
+#panel-alumno .ficha > .subseccion > h4,
+#panel-ficha .ficha .columna > .subseccion > h4,
+#panel-ficha .ficha .columna > h4{font-size:15px;text-transform:none;letter-spacing:0;color:var(--tinta);
+  font-weight:700;margin:0 0 12px;padding:2px 0 2px 10px;border-left:4px solid var(--marca);line-height:1.3}
+#panel-ficha .ficha .columna > h3,
+#panel-ficha .ficha .cab-columna h3{font-size:17px;text-transform:none;letter-spacing:0;color:var(--tinta);line-height:1.3}
+#panel-ficha .ficha .columna > h3{margin-bottom:12px}
+#panel-alumno .ficha .c > label,
+#panel-ficha .ficha .c > label{font-size:12.5px;color:var(--tinta-2)}
+#panel-alumno .ficha-cab .ident,
+#panel-ficha .ficha-cab .ident{font-size:13px;color:var(--tinta-2)}
+/* Reparto por grupos: los desplegables ocupan lo que hay, sin desbordar la
+   fila. Dos bloques con su fondo: los requisitos (azulado) y la asignación de
+   este curso (verdoso), para que la tabla se lea por zonas y no por columnas. */
+.tabla-asignar select{max-width:100%;min-width:160px}
+.tabla-asignar td{vertical-align:middle}
+.tabla-asignar th.grupo-cab{text-align:center;font-size:11px;letter-spacing:.03em;text-transform:uppercase;
+  border-bottom:1px solid var(--linea-2)}
+.tabla-asignar td.req,.tabla-asignar th.req{background:var(--zona-req)}
+.tabla-asignar td.asig,.tabla-asignar th.asig{background:var(--zona-asig)}
+.tabla-asignar tbody tr:hover td.req{background:var(--zona-req-cab)}
+.tabla-asignar tbody tr:hover td.asig{background:var(--zona-asig-cab)}
+/* Cursos › Calendario: el plazo de elección de empresa, aparte de las fechas de la FFEOE. */
+/* Un texto que se puede pinchar sin parecer un boton: el nombre en una tabla. */
+.enlace-suave{cursor:pointer;border-bottom:1px dotted var(--linea)}
+.enlace-suave:hover{color:var(--verde);border-bottom-color:var(--verde)}
+th.segunda::after{content:'·';margin-left:4px}
+
+.en-linea{display:flex;align-items:center;gap:6px;font-size:13px;
+  margin-top:auto;padding-bottom:6px}
+
+/* Dos niveles: la fase del curso arriba y sus pantallas debajo. Prospeccion y
+   asignacion son trabajos distintos, en momentos distintos y muchas veces de
+   personas distintas. */
+.fases{display:flex;gap:2px;background:var(--verde-oscuro);padding:0 14px;
+  flex:none;justify-content:center}
+.fase-boton{background:none;border:none;color:rgba(255,255,255,.72);
+  padding:9px 20px;font-size:14.5px;font-weight:600;cursor:pointer;
+  font-family:inherit;border-radius:6px 6px 0 0}
+.fase-boton:hover{color:var(--sobre-relleno);background:rgba(255,255,255,.08)}
+.fase-boton.activa{background:var(--papel);color:var(--verde)}
+.fase-boton.derecha{margin-left:auto}
+/* Un aviso se puede quitar de en medio con su x. */
+.aviso .texto{flex:1}
+.aviso .quitar{flex:none;font-size:15px;line-height:1;padding:0 2px;opacity:.6}
+.aviso .quitar:hover{opacity:1}
+
+.pestanas{display:flex;background:var(--papel);border-bottom:1px solid var(--linea);
+  padding:0 14px;overflow-x:auto;flex:none}
+.pest{background:none;border:none;border-bottom:3px solid transparent;color:var(--tinta-2);
+  padding:10px 15px;font-size:15px;cursor:pointer;font-family:inherit;
+  white-space:nowrap;font-weight:600}
+.pest.activa{color:var(--verde);border-bottom-color:var(--verde)}
+.pest:hover{background:var(--papel-2)}
+.pest .globo.atencion{background:var(--atencion)}
+.pest .globo,.fase-boton .globo{background:var(--bloqueo);color:var(--sobre-relleno);border-radius:10px;padding:0 6px;
+  font-size:12px;margin-left:6px}
+.pest-ajustes{margin-left:auto;color:var(--tinta-3)}
+.pest-ajustes.activa{color:var(--verde)}
+
+/* La zona de contenido ocupa lo que queda y se desplaza por dentro */
+.contenido{flex:1;min-height:0;display:flex;flex-direction:column}
+.vista{flex:1;min-height:0;overflow-y:auto;padding:16px 20px 24px}
+.vista.pantalla-completa{overflow:hidden;display:flex;flex-direction:column}
+
+.avisos{padding:10px 20px 0;display:flex;flex-direction:column;gap:7px;flex:none}
+.aviso{display:flex;align-items:flex-start;gap:10px;padding:9px 13px;border-radius:6px;font-size:13.5px;
+  background:var(--atencion-fondo);border-left:4px solid var(--atencion);color:var(--atencion)}
+/* Tres clases de aviso, como los estados: atencion (lo normal: falta algo),
+   info (solo informa) y bloqueo (lo que se pierde o impide seguir). */
+.aviso::before{content:'!';font-weight:800;flex:none;width:1em;text-align:center}
+.aviso.info{background:var(--info-fondo);border-left-color:var(--info);color:var(--info)}
+.aviso.info::before{content:'●';font-size:.8em;line-height:1.7}
+.aviso.bloqueo{background:var(--bloqueo-fondo);border-left-color:var(--bloqueo);color:var(--bloqueo)}
+.aviso.bloqueo::before{content:'✕'}
+/* Leyenda de una tabla: una linea, bajo la tabla, con lo que significa cada
+   marca. Sin ella, el color y los simbolos solo los entiende quien los hizo. */
+.leyenda{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin:8px 0 0;
+  font-size:12px;color:var(--tinta-2);line-height:1.5}
+.leyenda > span{display:inline-flex;align-items:center;gap:5px}
+.panel > .leyenda{flex:none}
+.leyenda .muestra{display:inline-block;width:16px;height:10px;border-radius:2px}
+.leyenda .muestra.c1{background:var(--orden-1)}
+.leyenda .muestra.c2{background:var(--orden-2)}
+.leyenda .muestra.hoy{width:0;height:12px;border-left:2px dashed var(--bloqueo);border-radius:0}
+.leyenda .dato-orden{padding:0 5px;border-radius:3px;font-weight:700}
+.leyenda .dato-orden.c1{background:color-mix(in srgb,var(--orden-1) 18%,transparent)}
+.leyenda .dato-orden.c2{background:color-mix(in srgb,var(--orden-2) 14%,transparent)}
+
+.bloque{margin:0 0 22px}
+.bloque > h2{font-size:16px;margin:0 0 3px;font-weight:700}
+.pie{margin:0 0 10px;color:var(--tinta-3);font-size:13.5px}
+/* Debajo de un criterio del baremo en la ficha: la media de la valoración del profesorado. */
+.valor-asistencia-ficha{padding:5px 0;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tinta)}
+/* Cursos › Calendario: sin fecha de corte no se calcula la asistencia. */
+input.fecha-grupo.falta-corte{border-color:var(--ambar);background:var(--ambar-claro)}
+.media-profesorado-ficha{display:block;margin-top:3px;font-size:12.5px;font-style:italic;color:var(--tinta-2)}
+
+/* ----------------------------------------------------------------- cifras */
+.cifras{display:grid;gap:12px;margin-bottom:22px;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.cifra{background:var(--papel);border:1px solid var(--linea);border-radius:8px;
+  padding:11px 14px;border-top:3px solid var(--verde)}
+.cifra .rot{font-size:12.5px;color:var(--tinta-2);font-weight:600}
+.cifra .v{font-size:30px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.cifra .pie{font-size:12px;color:var(--tinta-3)}
+.cifra.enlace{cursor:pointer}
+.cifra.enlace:hover{border-color:var(--verde);background:var(--verde-claro)}
+/* Tres cajitas en una fila, a la derecha de la cobertura, del tamano de
+   antes: la letra se encoge lo que haga falta para que quepa todo. */
+.cifras.tres{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.cifras.tres .cifra{padding:8px 10px;min-width:0}
+.cifras.tres .cifra .rot{font-size:11px}
+.cifras.tres .cifra .v{font-size:22px}
+.cifras.tres .cifra .pie{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Una tarjeta con varias lineas: un dato por linea, el numero a la derecha. */
+.cifra .lineas{margin-top:2px}
+.cifra .linea{display:flex;justify-content:space-between;align-items:baseline;gap:6px;
+  padding:1px 0;border-top:1px solid var(--linea)}
+.cifra .linea:first-child{border-top:0}
+.cifra .linea .t{font-size:10.5px;color:var(--tinta-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cifra .linea .v{font-size:14px;flex:none}
+.cifra .linea.enlace{cursor:pointer}
+.cifra .linea.enlace:hover .t{color:var(--verde)}
+/* Tres cifras en fila, al mismo tamano. */
+.cifra .par.tres{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.cifras.tres .cifra .par.tres .v{font-size:17px}
+.cifras.tres .cifra .par .sub{font-size:10px}
+.cifra .par{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:2px 0}
+.cifra .par .v{display:block}
+.cifra .par .sub{font-size:11.5px;color:var(--tinta-3);display:block;margin-top:-3px}
+
+.dos-columnas{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:0 24px;align-items:start}
+@media (max-width:1100px){.dos-columnas{grid-template-columns:1fr}}
+
+/* ----------------------------------------------------------------- tablas */
+.tabla-caja{overflow:auto;border:1px solid var(--linea);border-radius:8px;background:var(--papel)}
+/* La tabla tan ancha como sus datos: el hueco queda a la derecha, no entre el
+   nombre y las columnas, y la fila se sigue de un vistazo. */
+.tabla-caja.ajustada{width:fit-content;max-width:100%}
+.tabla-caja.ajustada table{width:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--linea)}
+thead th{background:var(--papel-2);font-size:11.5px;font-weight:700;color:var(--tinta-2);
+  white-space:nowrap;position:sticky;top:0;z-index:1}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--fila-resalte)}
+td.ajustado,th.ajustado{width:1%;white-space:nowrap}
+th.ordenable{cursor:pointer;user-select:none}
+th.ordenable:hover{color:var(--verde)}
+tr.fila-total td{background:var(--papel-2);font-weight:700;
+  border-top:1px solid var(--linea-2);border-bottom:2px solid var(--linea-2)}
+tfoot th{background:var(--papel-2);font-weight:700;border-top:2px solid var(--linea-2)}
+td.c1,th.c1{background:color-mix(in srgb,var(--orden-1) 10%,transparent)}
+td.c2,th.c2{background:color-mix(in srgb,var(--orden-2) 8%,transparent)}
+td.total,th.total{font-weight:700;border-left:1px solid var(--linea-2)}
+td.pulsable{cursor:pointer}
+td.pulsable:hover{background:var(--fila-resalte)}
+.vacio{text-align:center;color:var(--tinta-3);padding:20px}
+
+/* -------------------------------------------------------------- etiquetas */
+.et{display:inline-block;padding:1px 8px;border-radius:11px;font-size:12px;
+  font-weight:600;white-space:nowrap;background:var(--papel-2);color:var(--tinta-2);
+  border:1px solid var(--linea-2)}
+.et.verde{background:var(--verde-claro);color:var(--verde);border-color:var(--verde)}
+.et.ambar{background:var(--ambar-claro);color:var(--ambar);border-color:var(--ambar)}
+.et.rojo{background:var(--rojo-claro);color:var(--rojo);border-color:var(--rojo)}
+.et.mini{font-size:11px;padding:0 6px}
+
+/* El estado: cinco familias, siempre con icono y texto, y «bloqueo» con
+   relleno intenso para que destaque aunque no se perciba el rojo (verde,
+   ambar y rojo tienen casi la misma luminosidad). Lo pinta est() en el
+   cliente; no se escribe a mano. */
+.est{display:inline-flex;align-items:center;gap:4px;padding:1px 8px 1px 6px;border-radius:11px;
+  font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent;line-height:1.45;vertical-align:1px}
+.est::before,.est-ic::before{font-weight:800;text-align:center;flex:none}
+.est::before{width:1em}
+.est.mini{font-size:11px;padding:0 6px 0 5px}
+.est.ok,.est-ic.ok{background:var(--ok-fondo);color:var(--ok);border-color:var(--ok-borde)}
+.est.atencion,.est-ic.atencion{background:var(--atencion-fondo);color:var(--atencion);border-color:var(--atencion-borde)}
+.est.bloqueo,.est-ic.bloqueo{background:var(--bloqueo);color:var(--sobre-relleno);border-color:var(--bloqueo)}
+.est.info,.est-ic.info{background:var(--info-fondo);color:var(--info);border-color:var(--info-borde)}
+.est.neutro,.est-ic.neutro{background:var(--papel);color:var(--neutro);border-color:var(--linea-control)}
+.est.ok::before,.est-ic.ok::before{content:'✓'}
+.est.atencion::before,.est-ic.atencion::before{content:'!'}
+.est.bloqueo::before,.est-ic.bloqueo::before{content:'✕'}
+.est.info::before,.est-ic.info::before{content:'●';font-size:.8em}
+.est.neutro::before,.est-ic.neutro::before{content:'○'}
+.est[data-ic]::before,.est-ic[data-ic]::before{content:attr(data-ic);font-size:1em}
+/* Solo el icono, donde no cabe el texto (lista de empresas): la forma dice
+   el estado aunque no se distinga el color, y el nombre va en el title. */
+.est-ic{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;
+  border:1px solid transparent;font-size:10px;line-height:1;flex:none}
+/* Atributo: PRL, en su azul y siempre con la palabra. */
+.atr{display:inline-block;padding:0 6px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.02em;
+  white-space:nowrap;vertical-align:1px}
+.atr.prl{background:var(--prl-fondo);color:var(--prl);border:1px solid var(--prl-borde)}
+
+/* El estado se elige pulsando, no desplegando: son cinco y siempre los mismos,
+   asi que se ven todos de un vistazo y se sabe cuantos pasos quedan. */
+.estados{display:flex;gap:4px;flex-wrap:wrap;margin-top:14px}
+/* Un bloque de campos siempre deja aire debajo: sin esto, lo que venga
+   después —los estados, los requisitos— se le pegaba encima. */
+.campos + *{margin-top:14px}
+/* Y encima, si lo que viene antes son botones: la casilla de «Posibilidad de
+   contratación» se pegaba a «Guardar plazas» (3-11-2026). */
+.botones + .campos{margin-top:14px}
+.estado-opcion{display:flex;align-items:center;gap:6px;background:none;
+  border:1px solid var(--linea);border-radius:20px;padding:4px 11px 4px 6px;
+  font:inherit;font-size:13px;color:var(--tinta-3);cursor:pointer;white-space:nowrap}
+.estado-opcion:hover{border-color:var(--linea-control);color:var(--tinta-2)}
+.estado-opcion.puesto{color:var(--tinta);font-weight:600;background:var(--papel);border-color:var(--linea-control)}
+.estado-opcion.puesto.ok{border-color:var(--ok);background:var(--ok-fondo);color:var(--ok)}
+.estado-opcion.puesto.atencion{border-color:var(--atencion);background:var(--atencion-fondo);color:var(--atencion)}
+.estado-opcion.puesto.info{border-color:var(--info);background:var(--info-fondo);color:var(--info)}
+.estado-opcion.puesto.neutro{border-color:var(--neutro);color:var(--tinta)}
+
+/* Cada coordinador, sus iniciales. Sin color: los que tenia eran los mismos
+   que los estados (el coordinador 0 se leia como «Confirmada»). */
+.quien{display:inline-block;padding:0 7px;border-radius:10px;font-size:11.5px;
+  font-weight:700;color:var(--tinta);letter-spacing:.02em;background:var(--papel);
+  border:1px solid var(--linea-control)}
+.quien.nadie{background:none;color:var(--tinta-3);font-weight:400}
+
+/* ---------------------------------------------------------- recordatorios */
+.recordatorio{background:var(--papel);border:1px solid var(--linea);
+  border-left:4px solid var(--ambar);border-radius:6px;padding:9px 13px;
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  flex-wrap:wrap;margin-bottom:6px}
+.recordatorio .n{font-weight:700;cursor:pointer}
+.recordatorio .d{font-size:12.5px;color:var(--tinta-2)}
+/* A todo el ancho: quién es a la izquierda, lo último que se anotó en medio y
+   el teléfono a la derecha. En pantalla estrecha, uno debajo de otro. */
+.recordatorio{flex-wrap:nowrap}
+.recordatorio .quien-es{flex:0 0 340px;min-width:0}
+.recordatorio .ult{flex:1 1 auto;min-width:0;font-size:13px;color:var(--tinta);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.recordatorio .ult .de{font-style:italic;color:var(--tinta-2)}
+.recordatorio .ult.vacio{font-style:italic;color:var(--tinta-2)}
+.recordatorio .tel{flex:none}
+@media (max-width:900px){.recordatorio{flex-wrap:wrap}.recordatorio .quien-es{flex-basis:100%}}
+
+/* ---------------------------------------------------------------- filtros */
+/* La barra de filtros se lee como una cabecera, no como parte del contenido:
+   sobre blanco no se distinguia de la tabla que hay debajo. */
+.filtros{display:flex;flex-wrap:wrap;gap:9px 14px;align-items:flex-end;margin-bottom:12px;
+  background:var(--papel-2);border:1px solid var(--linea);
+  border-top:3px solid var(--verde);border-radius:0 0 8px 8px;
+  padding:10px 13px;flex:none}
+.filtros input,.filtros select{background:var(--papel)}
+.campo-filtro{display:flex;flex-direction:column;gap:3px}
+.campo-filtro label{font-size:11px;font-weight:700;color:var(--tinta-2);
+  text-transform:uppercase;letter-spacing:.05em}
+
+/* Filtro de varios valores: un desplegable con casillas. Ni un select de
+   valor unico, ni una hilera de botones que se come el ancho. */
+.multi{position:relative}
+.multi > button{background:var(--papel);border:1px solid var(--linea-2);
+  border-radius:6px;padding:6px 10px;font-size:13.5px;font-family:inherit;
+  cursor:pointer;color:var(--tinta);display:flex;align-items:center;gap:8px;
+  min-width:150px;justify-content:space-between}
+.multi > button:hover{border-color:var(--verde)}
+.multi > button .valor{color:var(--tinta-3)}
+.multi > button.puesto{border-color:var(--verde);background:var(--verde-claro)}
+.multi > button.puesto .valor{color:var(--verde);font-weight:600}
+.multi > button::after{content:'▾';color:var(--tinta-3);font-size:11px}
+.multi-panel{position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:100%;
+  background:var(--papel);border:1px solid var(--linea-2);border-radius:8px;
+  box-shadow:0 6px 20px rgba(0,0,0,.14);padding:6px;max-height:320px;overflow:auto}
+.multi-panel label{display:flex;align-items:center;gap:8px;padding:6px 8px;
+  border-radius:5px;font-size:13.5px;white-space:nowrap;cursor:pointer}
+.multi-panel label:hover{background:var(--papel-2)}
+.multi-panel .separa{border-top:1px solid var(--linea);margin:5px 0}
+.multi-panel button{background:none;border:none;color:var(--verde);cursor:pointer;
+  font:inherit;font-size:13px;padding:5px 8px}
+/*
+ * Los campos no se encierran en una caja marcada: fondo plano y una linea
+ * inferior. Y el color dice si estan hechos: en BLANCO lo que falta por
+ * rellenar, en gris lo que ya tiene contenido. Asi se ve de un vistazo lo que
+ * queda por hacer sin leer campo por campo.
+ *
+ * Ojo con el selector: `input[type=text]` NO alcanza a un <input> sin atributo
+ * type, aunque el navegador lo trate como texto. Por eso va por exclusion.
+ */
+select,textarea,
+input:not([type=checkbox]):not([type=radio]):not([type=submit]){
+  background:var(--papel);border:1px solid transparent;
+  border-bottom:1px solid var(--linea-control);color:var(--tinta);
+  border-radius:5px 5px 0 0;padding:6px 9px;font-size:14px;font-family:inherit}
+select{min-width:140px}
+textarea{resize:vertical;width:100%;min-height:58px}
+
+/* Relleno -> gris. `:placeholder-shown` es la unica forma de preguntarle al
+   CSS si un campo esta vacio, y por eso todos llevan un placeholder. */
+textarea:not(:placeholder-shown),
+input:not([type=checkbox]):not([type=radio]):not(:placeholder-shown),
+select.lleno{background:var(--papel-2)}
+
+select:hover,input:hover,textarea:hover{border-bottom-color:var(--tinta-3)}
+select:focus,input:focus,textarea:focus{outline:none;background:var(--papel);
+  border-bottom:2px solid var(--verde);padding-bottom:5px}
+/* Cuántas cosas hay con los filtros puestos. Va con los filtros, no debajo de
+   la tabla: es la respuesta a lo que acabas de filtrar, y se lee más grande
+   porque es una cifra, no una nota al pie. */
+.contador{margin-left:auto;font-size:15px;font-weight:700;color:var(--verde);
+  align-self:center;white-space:nowrap}
+
+
+/* Las plazas se distinguen por si la colaboracion esta cerrada o solo hablada:
+   sumarlas en un unico numero haria creer que hay cobertura que no hay. */
+td.plaza-confirmada{background:var(--ok-fondo)}
+td.plaza-posible{background:var(--atencion-fondo)}
+/* El fondo no basta (1,02:1 entre los dos): el icono dice cual es. */
+td.plaza-confirmada::before,td.plaza-posible::before{font-size:10px;font-weight:800;margin-right:3px;vertical-align:1px}
+td.plaza-confirmada::before{content:'✓';color:var(--ok)}
+td.plaza-posible::before{content:'!';color:var(--atencion)}
+.num.confirmadas{color:var(--verde);font-weight:700}
+.num.posibles{color:var(--ambar);font-weight:700}
+
+/* Filtro de varios valores: se pulsa lo que se quiere ver. Mas directo que un
+   desplegable multiple, que a estas edades casi nadie sabe usar con Ctrl. */
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{border:1px solid var(--linea-2);background:var(--papel);color:var(--tinta-2);
+  border-radius:13px;padding:4px 12px;font-size:12.5px;font-weight:600;
+  cursor:pointer;font-family:inherit;white-space:nowrap}
+.chip:hover{border-color:var(--verde);color:var(--verde)}
+.chip.puesto{background:var(--verde);border-color:var(--verde);color:var(--sobre-relleno)}
+.chip.puesto:hover{background:var(--verde-oscuro);color:var(--sobre-relleno)}
+
+/* Cada ciclo, su franja de color junto a las siglas (identidad, no estado):
+   se ve marcado o no. Marcado = relleno de marca, como cualquier chip. */
+.chip.k1,.ciclo-chip.k1{box-shadow:inset 4px 0 0 var(--ciclo-1)}
+.chip.k2,.ciclo-chip.k2{box-shadow:inset 4px 0 0 var(--ciclo-2)}
+.chip.k3,.ciclo-chip.k3{box-shadow:inset 4px 0 0 var(--ciclo-3)}
+.chip.k4,.ciclo-chip.k4{box-shadow:inset 4px 0 0 var(--ciclo-4)}
+.chip.k5,.ciclo-chip.k5{box-shadow:inset 4px 0 0 var(--ciclo-5)}
+.loc-ciclo.k1{box-shadow:inset 4px 0 0 var(--ciclo-1)}
+.loc-ciclo.k2{box-shadow:inset 4px 0 0 var(--ciclo-2)}
+.loc-ciclo.k3{box-shadow:inset 4px 0 0 var(--ciclo-3)}
+.loc-ciclo.k4{box-shadow:inset 4px 0 0 var(--ciclo-4)}
+.loc-ciclo.k5{box-shadow:inset 4px 0 0 var(--ciclo-5)}
+/* Localidades: las empresas de cada una, una por línea corta y sin ensanchar la tabla. */
+.loc-empresas{max-width:380px;white-space:normal}
+.loc-empresa{display:inline-flex;align-items:center;gap:4px;margin:1px 10px 1px 0;font-size:13px}
+.loc-empresa.pulsable{cursor:pointer}
+.loc-empresa:hover{color:var(--verde)}
+/* Localidades: cada ciclo con su alumnado y la cobertura, sin ser pulsable. */
+.loc-ciclo{display:inline-flex;align-items:center;gap:4px;margin:1px 6px 1px 0;padding:1px 8px 1px 10px;
+  border:1px solid var(--linea-2);border-radius:11px;font-size:12.5px;font-weight:600;color:var(--tinta-2);white-space:nowrap}
+
+/* Ficha de empresa: lo que acogió en cursos anteriores. */
+.colaboraciones{margin:0;padding-left:18px;font-size:13.5px}
+
+/* Seguimiento › Por profesor: una etiqueta por grupo cuando la tarea va por grupos. */
+.por-grupo{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+
+/* Seguimiento › Por profesor: los enlaces de cada tarea, encima de la tabla. */
+.enlaces-tareas{justify-content:flex-start;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.enlaces-tareas .pie{margin:0}
+
+/* Convenios: los datos de cada convenio por bloques, en el orden de Séneca. */
+.convenio-bloques{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin:8px 0}
+.convenio-bloque{background:var(--papel);border:1px solid var(--linea);border-radius:8px;padding:10px 12px}
+.convenio-bloque h4{margin:0 0 6px;color:var(--verde)}
+.convenio-bloque dl{display:grid;grid-template-columns:minmax(120px,40%) 1fr;gap:4px 10px;margin:0;font-size:13px}
+.convenio-bloque dt{color:var(--tinta-2)}
+.convenio-bloque dd{margin:0}
+.copiable{cursor:copy;border-bottom:1px dashed var(--linea-2)}
+.copiable:hover{background:var(--fila-resalte)}
+
+/* Asignación por ciclo: la fila de ciclos. */
+.ciclos-asig{margin-bottom:10px}
+.chip small{font-weight:500;opacity:.8;margin-left:3px}
+
+/* Sesión de asignación de un ciclo (maqueta aprobada el 4-11-2026): cabecera
+   con las cuentas y el botón de guardar, avisos, pestañas y una sola tabla
+   con la ficha de cada alumno/a desplegada debajo de su fila. */
+.ses-cab{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;margin-bottom:10px}
+.ses-cab h2{margin:0}
+.ses-cab .pie{margin:0}
+.ses-cuentas{display:flex;gap:16px;font-size:13.5px;color:var(--tinta-2);font-variant-numeric:tabular-nums}
+.ses-cuentas b{color:var(--tinta);font-size:15px}
+.ses-acciones{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ses-selector{margin:0 0 12px}
+.ses-avisos{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.ses-avisos .aviso .quitar{background:none;border:none;color:inherit;cursor:pointer}
+.ses-pest{margin-bottom:10px}
+.ses-filtros{align-items:center}
+.ses-filtro{border:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;font-size:13px}
+.ses-filtro legend{float:left;font-weight:700;color:var(--tinta-2);margin-right:4px;padding:0}
+.ses-filtro label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap}
+.ses-filtro input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:var(--verde)}
+table.tabla-sesion-asignacion td{vertical-align:middle}
+table.tabla-sesion-asignacion select{max-width:220px}
+table.tabla-sesion-asignacion small.ses-sub{display:block;color:var(--tinta-2);font-size:12px}
+tr.ses-fila{cursor:pointer}
+tr.ses-fila:hover td{background:var(--fila-resalte)}
+tr.ses-fila.abierta td{background:var(--verde-claro);border-bottom-color:transparent}
+.ses-mas{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:1px solid var(--linea-control);
+  border-radius:4px;background:var(--papel);font:inherit;font-size:15px;font-weight:700;color:var(--tinta-2);line-height:1;cursor:pointer;padding:0}
+tr.ses-detalle > td{background:var(--verde-claro);padding:0 10px 14px 42px}
+.ses-ficha{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px}
+@media (max-width:900px){.ses-ficha{grid-template-columns:minmax(0,1fr)} tr.ses-detalle > td{padding-left:10px}}
+.ses-parte{background:var(--papel);border:1px solid var(--linea);border-radius:6px;padding:10px 12px;min-width:0}
+.ses-parte h4{margin:0 0 6px;font-size:14px;color:var(--tinta);text-transform:none;letter-spacing:0}
+table.ses-lista{width:100%}
+table.ses-lista td{padding:5px 8px;font-size:13px;vertical-align:middle}
+table.ses-lista tr:last-child td{border-bottom:none}
+table.ses-lista tr.elegida td{background:var(--verde-claro)}
+table.ses-lista td.ses-n{color:var(--tinta-3);font-weight:700}
+table.ses-lista td.ses-estado{text-align:right}
+table.ses-lista small{display:block;color:var(--tinta-2);font-size:12px}
+table.ses-lista b.tachada{text-decoration:line-through;color:var(--tinta-3)}
+.ses-nota{margin:8px 0 0;font-size:13px;color:var(--tinta-2)}
+.ses-parte h4.ses-otras-tit{margin:12px 0 4px}
+.ses-parte .botones{margin-top:8px}
+dl.ses-datos{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:0;font-size:13px}
+dl.ses-datos dt{color:var(--tinta-2);font-weight:600}
+dl.ses-datos dd{margin:0}
+/* El mismo Guardar de abajo que en las demás páginas: pegado al borde inferior al desplazarse. */
+.ses-barra-guardar{position:sticky;bottom:0;z-index:5;margin-top:14px;background:var(--papel);border-top:1px solid var(--linea-2);
+  padding:10px 16px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap}
+.ses-barra-guardar .pie{margin:0}
+.ses-barra-guardar .btn{font-size:15px;padding:9px 24px}
+.ses-ocupacion{display:inline-flex;gap:2px;vertical-align:middle;margin-right:6px}
+.ses-ocupacion i{width:9px;height:9px;border-radius:2px;border:1px solid var(--verde);display:inline-block}
+.ses-ocupacion i.llena{background:var(--verde)}
+.con-ficha{border-bottom:1px dotted var(--tinta-3);cursor:help}
+.enlace-suave.con-ficha{cursor:pointer}
+span.propuesta{color:var(--tinta-2);border-bottom:1px dashed var(--tinta-3)}
+span.confirmada{font-weight:700}
+
+/* ------------------------------------------- empresas: lista y ficha ---- */
+.dos-paneles{flex:1;min-height:0;display:grid;gap:16px;
+  grid-template-columns:minmax(260px,24%) minmax(0,1fr)}
+@media (max-width:1100px){.dos-paneles{grid-template-columns:1fr;overflow-y:auto}}
+.panel{min-height:0;display:flex;flex-direction:column}
+.panel > .tabla-caja{flex:1;min-height:0}
+.panel > .pie{flex:none;margin:7px 0 0;font-size:12.5px}
+.vista.pantalla-completa > .panel{flex:1}
+.tabla-lista tbody tr{cursor:pointer}
+.tabla-lista tbody tr.activo{background:var(--verde-claro);box-shadow:inset 3px 0 0 var(--verde)}
+/* La fila de la lista: el punto del estado, y a su derecha el nombre. */
+.fila-empresa{display:flex;align-items:center;gap:8px}
+.quien-es{min-width:0}
+.tabla-lista .nom .quien{margin-left:6px;vertical-align:1px}
+
+.tabla-lista .nom{font-weight:600}
+.tabla-lista .sub{font-size:12px;color:var(--tinta-3);margin-top:1px}
+
+.ficha{background:var(--papel);border:1px solid var(--linea);border-radius:8px;
+  height:100%;overflow-y:auto}
+.ficha-vacia{display:flex;align-items:center;justify-content:center;
+  color:var(--tinta-3);font-size:15px}
+.ficha-cab{padding:12px 16px;border-bottom:1px solid var(--linea);
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:22px}
+@media (max-width:1000px){.ficha-cab{grid-template-columns:1fr;gap:12px}}
+/* Nombre, estrellas y ciclos en la misma línea y con la misma separación. */
+.titulo-linea{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.titulo-linea h2{margin:0}
+.ficha-cab h2{font-size:19px;margin:0 0 2px;line-height:1.2}
+/* Un punto más pequeñas que el nombre: acompañan al título, no compiten. */
+.titulo-linea .puntuacion .pico{font-size:16px}
+/* El historial cuelga de la cabecera, y si está cerrado no ocupa ni separa. */
+#fic-historial:empty{display:none}
+#fic-historial{padding:4px 16px 12px;border-bottom:1px solid var(--linea);
+  background:var(--papel-2)}
+.ficha-cab .ident{font-size:12px;color:var(--tinta-3)}
+.ficha-cab .insignias{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+/* Un bloque con su filtro propio a la derecha del título. */
+.cab-bloque{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cab-bloque h2{margin-bottom:0}
+.cab-bloque .chip{padding:2px 9px;font-size:11.5px}
+.pie.recordatorios-mas{margin-top:8px}
+
+/* Buscar va SIEMPRE en el mismo sitio —el último de la barra, empujado a la
+   derecha— y con otra pinta que los filtros. Los filtros acotan un conjunto
+   que ya se conoce; buscar es un salto libre. Mezclado entre ellos y con su
+   mismo aspecto, en cada pestaña había que ir a encontrarlo. */
+/* `order` y no solo el margen: así queda el último de la fila aunque en el
+   marcado vaya antes, y nada puede colarse a su derecha. El contador y los
+   botones se quedan con los filtros, a la izquierda. */
+.campo-filtro.busca{order:99;margin-left:auto}
+/* Pegado al último filtro, no flotando a la derecha: es la respuesta a lo que
+   acabas de filtrar y se lee ahí mismo, al terminar. */
+.filtros .contador{margin-left:0}
+/* La lupa es un SVG en data URL, que no puede leer variables: su trazo es el
+   color de --tinta-2, escrito en el propio SVG por esa razón. */
+.campo-filtro.busca input{background:var(--papel);border:1.5px solid var(--verde);
+  border-radius:999px;padding-left:28px;min-width:210px;
+  background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234B554E' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:8px 50%;background-size:14px}
+.campo-filtro.busca input:focus{border-color:var(--verde-oscuro)}
+.campo-filtro.busca label{color:var(--verde);font-weight:700}
+@media (max-width:720px){.campo-filtro.busca{margin-left:0}
+  .campo-filtro.busca input{min-width:0}}
+
+/* La cabecera tenía sitio de sobra: ahí van la valoración y los ciclos. */
+
+.ficha .aviso{margin:10px 16px}
+
+.columnas{display:grid;grid-template-columns:1fr 1fr;gap:0}
+@media (max-width:1000px){.columnas{grid-template-columns:1fr}}
+.columna{padding:14px 16px;min-width:0}
+.columna + .columna{border-left:1px solid var(--linea)}
+@media (max-width:1000px){.columna + .columna{border-left:none;border-top:1px solid var(--linea)}}
+.columna > h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--verde);margin:0 0 2px;font-weight:700}
+.columna > .nota{font-size:12px;color:var(--tinta-3);margin:0 0 11px}
+.cab-columna{display:flex;justify-content:space-between;align-items:baseline;
+  gap:12px;margin-bottom:11px}
+.cab-columna h3{margin:0}
+.subseccion{margin-top:16px;padding-top:12px;border-top:1px solid var(--linea)}
+.subseccion h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--tinta-3);margin:0 0 8px;font-weight:700}
+
+/* Rejilla de 12: cada campo ocupa lo que le corresponde por su contenido */
+.campos{display:grid;grid-template-columns:repeat(12,1fr);gap:8px 9px}
+.c{display:flex;flex-direction:column;gap:2px;grid-column:span 12}
+.c.c2{grid-column:span 2}.c.c3{grid-column:span 3}.c.c4{grid-column:span 4}
+.c.c5{grid-column:span 5}.c.c6{grid-column:span 6}.c.c8{grid-column:span 8}
+.c.c12{grid-column:span 12}
+.c > label{font-size:11.5px;color:var(--tinta-3);font-weight:600}
+.c input:not([type=checkbox]):not([type=radio]),.c select,.c textarea{width:100%;padding:5px 8px;font-size:13.5px}
+.c input[type=number]{text-align:right}
+
+.contacto-fila{display:grid;grid-template-columns:repeat(12,1fr);gap:5px 7px;
+  padding:9px 0;border-bottom:1px solid var(--linea);align-items:end}
+.contacto-fila:last-of-type{border-bottom:none}
+.contacto-fila .quitar{grid-column:span 1;background:none;border:1px solid var(--linea-2);
+  color:var(--rojo);border-radius:6px;cursor:pointer;font-size:15px;line-height:1;
+  padding:6px 0;font-family:inherit}
+.contacto-fila .quitar:hover{background:var(--rojo);color:var(--sobre-relleno);border-color:var(--rojo)}
+
+/* Plazas: una linea por curso, etiqueta y casilla. Sin marcos. */
+.linea-plazas{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.rotulo{font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--tinta-3);font-weight:700;flex:none;width:22px}
+
+/* Las funciones de cada persona, en una fila */
+.funciones{flex-direction:row!important;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.funcion{display:flex;align-items:center;gap:5px;font-size:12.5px;
+  color:var(--tinta-2);cursor:pointer;white-space:nowrap}
+/* Once grupos en tarjetas ocupaban media ficha para once numeros. Ahora es
+   una linea por curso: etiqueta y casilla, sin caja alrededor. */
+.plazas{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.plaza{display:flex;align-items:center;gap:5px}
+.plaza label{font-size:12px;color:var(--tinta-2);white-space:nowrap}
+.plaza.afin label{color:var(--verde);font-weight:600}
+.plaza.afin label::before{content:'●';font-size:8px;vertical-align:middle;margin-right:3px}
+.plaza input{width:44px;padding:3px 4px;font-size:13.5px;text-align:center}
+.plaza input:not(:placeholder-shown){background:var(--verde-claro);font-weight:600}
+.mini-num:not(:placeholder-shown){background:var(--papel-2);font-weight:600}
+.otros-grupos{background:none;border:none;color:var(--verde);cursor:pointer;
+  font:inherit;font-size:12.5px;padding:2px 0;text-decoration:underline}
+.mini-num{width:46px;padding:3px 5px;font-size:13.5px;text-align:center;
+  border:1px solid var(--linea-2);border-radius:4px;background:var(--papel)}
+.mini-num:focus{border-color:var(--verde)}
+
+.tel{background:var(--verde);color:var(--sobre-relleno);border-radius:6px;padding:5px 11px;
+  font-size:13.5px;font-weight:600;text-decoration:none;white-space:nowrap}
+.tel:hover{background:var(--verde-oscuro)}
+
+.linea-hist{padding:7px 0;border-bottom:1px solid var(--linea);font-size:13px}
+.linea-hist:last-child{border-bottom:none}
+.linea-hist .cuando{font-size:11.5px;color:var(--tinta-3);font-weight:600}
+
+/* Historial plegado: con diez llamadas ocupa mas que el resto de la columna,
+   y casi siempre basta con ver cuantas hay y cuando fue la ultima. */
+.plegable{border:1px solid var(--linea);border-radius:7px;background:var(--papel)}
+.plegable > summary{cursor:pointer;padding:8px 12px;font-size:13px;
+  font-weight:600;color:var(--tinta-2);list-style:none;
+  display:flex;align-items:center;gap:7px}
+.plegable > summary::before{content:'▸';color:var(--tinta-3);font-size:11px}
+.plegable[open] > summary::before{content:'▾'}
+.plegable > summary::-webkit-details-marker{display:none}
+.plegable > summary:hover{color:var(--verde)}
+.plegable > summary .apunte{font-weight:400;color:var(--tinta-3);font-size:12px}
+.plegable[open] > summary{border-bottom:1px solid var(--linea)}
+.plegable .linea-hist{padding:7px 12px}
+td.cambio{font-size:12.5px}
+.linea-hist.cambio{font-size:12.5px;color:var(--tinta-2)}
+.cambio .campo,.linea-hist.cambio .campo{font-weight:600;color:var(--tinta)}
+.cambio .antes,.linea-hist.cambio .antes{color:var(--tinta-3);text-decoration:line-through}
+.cambio .ahora,.linea-hist.cambio .ahora{color:var(--verde);font-weight:600}
+
+.botones{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.btn{background:var(--papel-2);border:1px solid var(--linea-control);color:var(--tinta);
+  border-radius:6px;padding:7px 14px;font-size:14px;font-weight:600;
+  cursor:pointer;font-family:inherit}
+.btn:hover{border-color:var(--verde);color:var(--verde)}
+.btn.principal{background:var(--verde);border-color:var(--verde);color:var(--sobre-relleno)}
+.btn.principal:hover{background:var(--verde-oscuro);color:var(--sobre-relleno)}
+/* Lo que borra o saca datos: se distingue de un Guardar a simple vista. */
+.btn.peligro{background:var(--papel);border-color:var(--rojo);color:var(--rojo)}
+.btn.peligro:hover{background:var(--rojo-claro);border-color:var(--rojo);color:var(--rojo)}
+.btn.peligro.confirmar{background:var(--rojo);color:var(--sobre-relleno)}
+.btn.peligro.confirmar:hover{background:var(--bloqueo-oscuro);color:var(--sobre-relleno)}
+/* La confirmación en pantalla (confirmarAqui): una caja junto a lo pulsado. */
+.confirmacion{position:fixed;z-index:95;width:min(380px,calc(100vw - 24px));background:var(--papel);color:var(--tinta);
+  border:1px solid var(--linea-2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px 14px}
+.confirmacion p{margin:0 0 8px;font-size:13.5px;line-height:1.45}
+.confirmacion label{display:block;font-size:11.5px;color:var(--tinta-3);font-weight:600;margin-bottom:2px}
+.confirmacion textarea{width:100%;font-size:13.5px;padding:5px 8px}
+.confirmacion .botones{margin-top:10px}
+.btn.pequeno{padding:4px 10px;font-size:13px}
+
+/* Reparto: una tabla de ancho completo para seis columnas dejaba la pantalla
+   medio vacia. En rejilla caben cuatro veces mas empresas de una vez, que es
+   justo lo que se necesita para repartirlas. */
+.orden-reparto{display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+  font-size:13px;color:var(--tinta-2);margin-bottom:9px;flex:none}
+.orden-reparto label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.orden-reparto select{min-width:auto;font-size:13px;padding:4px 8px}
+.panel > .rejilla{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+
+.rejilla{display:grid;gap:7px;align-content:start;
+  grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
+.tarjeta{display:flex;align-items:flex-start;gap:9px;background:var(--papel);
+  border:1px solid var(--linea);border-radius:7px;padding:8px 11px;cursor:pointer}
+.tarjeta:hover{border-color:var(--verde)}
+.tarjeta.marcada{border-color:var(--verde);background:var(--verde-claro)}
+.tarjeta input{margin-top:2px;flex:none}
+.tarjeta .cuerpo{min-width:0;flex:1}
+.tarjeta .nom{font-weight:600;font-size:13.5px;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tarjeta .pie2{font-size:11.5px;color:var(--tinta-3);margin-top:3px;
+  display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tarjeta .nom{cursor:pointer}
+.tarjeta .nom:hover{color:var(--verde)}
+
+/* Los ciclos de cada empresa se pulsan aqui: es dato permanente, de toda la
+   base, no de un curso. Encendido, encaja; apagado, no. */
+.ciclos-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.ciclo-chip{border:1px solid var(--linea);background:var(--papel);
+  color:var(--tinta-3);border-radius:4px;padding:1px 7px;font-size:11px;
+  font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em}
+.ciclo-chip:hover{border-color:var(--verde);color:var(--verde)}
+.ciclo-chip.puesto{background:var(--verde);border-color:var(--verde);color:var(--sobre-relleno)}
+
+.filtros.acciones{border-top:1px solid var(--linea);border-radius:8px;
+  margin-top:-12px;margin-bottom:12px}
+
+.incidencia{background:var(--papel);border:1px solid var(--linea);border-radius:8px;
+  padding:12px 14px;margin-bottom:9px;border-left:4px solid var(--atencion)}
+/* La que impide asignar, en rojo; la de datos, en ambar. */
+.incidencia.bloqueo{border-left-color:var(--bloqueo)}
+.incidencia h3{margin:0 0 2px;font-size:14.5px}
+.incidencia .clave{font-size:12px;color:var(--tinta-3);font-weight:600}
+.incidencia .detalle{margin:6px 0 0;font-size:13.5px}
+.incidencia .quehacer{margin:6px 0 0;font-size:13px;color:var(--tinta);font-weight:600}
+
+/* Barra finísima mientras se habla con el servidor. Nada de tapar la
+   pantalla: solo que se sepa que el clic ha llegado. */
+body.trabajando::before{content:'';position:fixed;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--verde-claro),var(--verde),var(--verde-claro));
+  background-size:200% 100%;animation:barra 1.1s linear infinite;z-index:90}
+@keyframes barra{from{background-position:200% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){body.trabajando::before{animation:none}}
+/* Deshabilitado con colores que cumplen contraste, no con opacidad. */
+button:disabled,.btn:disabled,.btn.principal:disabled{background:var(--papel-2);border-color:var(--linea);
+  color:var(--tinta-3);cursor:not-allowed}
+body.trabajando button:disabled{cursor:progress}
+
+/* El correo, tal cual le llegara. Se ensena antes de mandar nada. */
+.tarjeta-correo{border:1px solid var(--linea);border-radius:8px;background:var(--papel)}
+.cabecera-correo{padding:10px 14px;border-bottom:1px solid var(--linea);
+  font-size:13px;color:var(--tinta-2);background:var(--papel-2);
+  border-radius:8px 8px 0 0}
+.cuerpo-correo{margin:0;padding:14px;font:13.5px/1.55 inherit;white-space:pre-wrap;
+  max-height:320px;overflow:auto}
+code{background:var(--papel-2);border:1px solid var(--linea);border-radius:4px;
+  padding:0 5px;font-size:12px;font-family:monospace;white-space:nowrap}
+
+.mensaje{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+  background:var(--tinta);color:var(--sobre-relleno);padding:10px 19px;border-radius:8px;
+  font-size:14px;font-weight:600;z-index:80;max-width:92vw;text-align:center;
+  box-shadow:0 5px 18px rgba(0,0,0,.25)}
+.mensaje.error{background:var(--rojo)}
+
+:focus-visible{outline:2px solid var(--verde);outline-offset:2px}
+
+/* ---------------------------------------------------- páginas sueltas
+   Formularios de empresa y alumnado, valoración y páginas del profesorado:
+   una hoja centrada sobre fondo gris, tarjetas y la barra de envío abajo.
+   Cada página solo ajusta lo suyo (el ancho, sobre todo). */
+body.suelta{background:var(--papel-2)}
+.hoja{max-width:640px;margin:0 auto;padding:0 16px 60px}
+.hoja h1{font-size:22px;margin:26px 0 4px}
+.hoja .lema{color:var(--tinta-2);font-size:15px;margin:0 0 22px;line-height:1.45}
+.tarjeta-form{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.tarjeta-form h2{font-size:15px;margin:0 0 12px;color:var(--verde)}
+.faltan{background:var(--ambar-claro);border-left:4px solid var(--ambar);border-radius:6px;padding:12px 15px;margin-bottom:14px;color:var(--ambar)}
+.faltan ul{margin:8px 0 0;padding-left:20px}
+.faltan li{margin:3px 0}
+.gracias{text-align:center;padding:60px 20px}
+.gracias .marca{font-size:44px;color:var(--verde);line-height:1}
+.barra-envio{position:sticky;bottom:0;background:var(--papel);border-top:1px solid var(--linea-2);padding:12px 20px;margin:0 -20px -18px;
+  border-radius:0 0 10px 10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.barra-envio .btn{font-size:15px;padding:10px 22px}
+
+/* ----------------------- alumnado en empresas (13_Dual: tutor/a dual y Convenios) */
+.dual-empresa{background:var(--papel);border:1px solid var(--linea-2);border-radius:8px;margin:0 0 16px;overflow:hidden}
+.dual-empresa > header{padding:10px 14px;border-bottom:1px solid var(--linea)}
+.dual-empresa > header h2{margin:0;font-size:18px;color:var(--verde-oscuro)}
+.dual-empresa > header .pie{display:block;margin:2px 0 0}
+.dual-cuerpo{display:flex;flex-direction:column;gap:14px;padding:12px 14px 14px}
+.dual-contactos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.dual-persona{min-width:0;font-size:13.5px}
+.dual-persona .rol{font-size:12.5px;font-weight:600;color:var(--tinta-2)}
+.dual-persona .nombre{font-weight:700}
+.dual-persona .via{overflow-wrap:anywhere}
+.dual-linea{display:block;margin-top:3px}
+.dual-motivo{white-space:normal;max-width:260px}
+a.dual-pdf{display:table;margin-top:4px;text-decoration:none}
+.dual-alumnado td{vertical-align:top}
+tr.dual-cierre > td{background:var(--papel)}
+.dual-cuadro{border:1px solid var(--linea-2);border-radius:6px;padding:10px 14px;background:var(--papel);margin-top:8px}
+.dual-cuadro > label,.dual-valoracion > label{display:block;font-weight:600;font-size:13.5px;margin-top:6px}
+.dual-cuadro textarea{width:100%}
+.dual-sub{font-weight:600;font-size:13.5px;margin:10px 0 4px}
+.dual-apartado{margin:0 0 6px;font-size:14.5px}
+.dual-visitas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.dual-visita{border:1px solid var(--linea);border-radius:6px;padding:8px 12px;display:flex;flex-direction:column;gap:4px;
+  min-width:0;font-size:13.5px}
+.dual-visita.hecha{border-color:var(--linea-2)}
+.dual-visita .titulo{font-weight:700}
+.dual-visita .est,.dual-visita .btn{align-self:flex-start}
+.dual-pregunta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;align-items:center;padding:7px 0;
+  border-bottom:1px solid var(--linea)}
+.dual-pregunta .que{font-weight:700;font-size:13.5px}
+.dual-sino{display:flex;gap:6px}
+.dual-sino button{border:1.5px solid var(--linea-2);background:var(--papel);color:var(--tinta-2);border-radius:6px;
+  padding:4px 18px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.dual-sino button.si.puesto{background:var(--verde);border-color:var(--verde);color:var(--sobre-relleno)}
+.dual-sino button.no.puesto{background:var(--rojo);border-color:var(--rojo);color:var(--sobre-relleno)}
+@media (max-width:700px){
+  .dual-visitas{grid-template-columns:minmax(0,1fr)}
+  .dual-pregunta{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+
+  <script>
+/**
+ * Llamar al servidor desde las paginas publicas (empresa, valoracion,
+ * alumnado, eleccion). Cada pagina define URL_SERVIDOR con la direccion
+ * publica (plantillaPublica_ en 05_WebApp.js).
+ *
+ * google.script.run viaja con las cuentas de Google del navegador y, con dos o
+ * mas abiertas a la vez, Google la rechaza: el formulario de la empresa no
+ * abria salvo en incognito (6-11-2026). Aqui se llama a doPost sin cookies,
+ * como en incognito.
+ *
+ * Si esa via no responde en la primera llamada (que en todas las paginas es
+ * de lectura), se sigue con google.script.run como antes; en la copia de
+ * GitHub Pages no hay google.script.run y se avisa del fallo. Una vez que ha
+ * funcionado no se vuelve atras: repetir un guardado por otra via podria
+ * grabarlo dos veces.
+ *
+ * ok(resultado) si va bien; mal({ message }) si el servidor da un error.
+ */
+var _viaServidor = '';             // '' sin probar, 'directa' o 'google'
+
+function alServidor(fn, args, ok, mal) {
+  args = args || [];
+  function porGoogle() {
+    var r = google.script.run.withSuccessHandler(ok).withFailureHandler(mal);
+    r[fn].apply(r, args);
+  }
+  if (_viaServidor === 'google' || typeof XMLHttpRequest === 'undefined' ||
+      typeof URL_SERVIDOR !== 'string' || !URL_SERVIDOR) {
+    _viaServidor = 'google';
+    return porGoogle();
+  }
+  function sinRespuesta() {
+    if (_viaServidor === 'directa' || typeof google === 'undefined') {
+      mal({ message: 'No se ha podido conectar con el servidor. Compruebe la conexión e inténtelo de nuevo.' });
+    } else {
+      _viaServidor = 'google';
+      porGoogle();
+    }
+  }
+  var x = new XMLHttpRequest();
+  x.open('POST', URL_SERVIDOR, true);
+  x.withCredentials = false;
+  // text/plain: una peticion simple, sin consulta previa (CORS) que Apps
+  // Script no contesta.
+  x.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+  x.onload = function () {
+    var r = null;
+    try { r = JSON.parse(x.responseText); } catch (e) { r = null; }
+    if (x.status !== 200 || !r || typeof r !== 'object' || !('resultado' in r || 'error' in r)) {
+      return sinRespuesta();
+    }
+    _viaServidor = 'directa';
+    if ('error' in r) mal({ message: String(r.error) });
+    else ok(r.resultado);
+  };
+  x.onerror = sinRespuesta;
+  x.send(JSON.stringify({ fn: fn, args: args }));
+}
+</script>
+
+  <style>
+    /* La elección de empresa del alumnado, aparte del formulario de datos.
+       Se hace desde el móvil: se toca una empresa de abajo y pasa al final de
+       la lista; las flechas la mueven. Botones grandes, para el pulgar. */
+    .pregunta{border-top:1px solid var(--linea);padding-top:16px;margin-top:16px}
+    .pregunta:first-of-type{border-top:none;padding-top:0;margin-top:0}
+    .pregunta .que{font-weight:700;font-size:15px;margin-bottom:3px;line-height:1.35}
+    .pregunta .que .ob{color:var(--rojo);font-weight:700}
+    .detalle{font-size:13.5px;color:var(--tinta-2);margin-bottom:10px;line-height:1.45}
+    .pregunta input,.pregunta select{font-size:16px;padding:10px 12px}
+    .identificado{background:var(--verde-claro);border:1px solid var(--verde);border-radius:8px;
+      padding:10px 14px;margin-bottom:14px;color:var(--verde-oscuro)}
+    .identificado strong{font-size:16px}
+    .identificado .pie{margin:2px 0 0}
+    .pref-sep{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--tinta-3);margin:16px 0 6px}
+    .pref-lista{display:flex;flex-direction:column;gap:6px}
+    .pref-emp{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;
+      border:1.5px solid var(--linea-2);border-radius:8px;padding:8px 8px 8px 10px;background:var(--papel)}
+    .pref-emp .n{font-weight:700;color:var(--verde);text-align:center;font-size:16px}
+    .pref-emp .nom{font-weight:700;font-size:14.5px;line-height:1.3}
+    .pref-emp small{display:block;color:var(--tinta-3);font-size:12.5px;line-height:1.35;margin-top:1px}
+    .pref-emp .para-ti{display:inline-block;margin-top:3px;font-size:12px;font-weight:700;color:var(--info);
+      background:var(--info-fondo);border-radius:4px;padding:1px 6px}
+    .pref-mover{display:flex;gap:4px}
+    .pref-mover button{width:38px;height:38px;border:1px solid var(--linea-control);background:var(--papel);
+      border-radius:6px;font-size:16px;color:var(--tinta);cursor:pointer;font-family:inherit}
+    .pref-mover button:disabled{opacity:.35;cursor:default}
+    button.pref-emp{text-align:left;cursor:pointer;font-family:inherit;color:var(--tinta);border-style:dashed}
+    button.pref-emp:hover{border-color:var(--verde)}
+    button.pref-emp .n{color:var(--tinta-3)}
+    .pref-vacia{color:var(--tinta-3);font-size:14px;padding:6px 0}
+    .pref-marcas{display:block;margin-top:3px}
+    /* Comparar: tres columnas para que quepa en el móvil sin desplazarse de lado. */
+    .pref-comparar{margin-top:12px}
+    .pref-comparar td{vertical-align:top}
+    .pref-comparar small{display:block;color:var(--tinta-3);font-size:12.5px;line-height:1.35;margin-top:2px}
+    .pref-pestanas{margin:0 -20px 4px}
+    /* Lo propio de esta página sobre la hoja común (páginas sueltas). */
+    .barra-envio{margin-top:14px}
+  </style>
+</head>
+<body class="suelta">
+
+<div class="hoja">
+
+  <!-- ===================================================== ENTRADA ===== -->
+  <div id="entrada">
+    <h1>Elección de empresa para la FFEOE</h1>
+    <p class="lema">Aquí ordenas las empresas de tu ciclo según tu preferencia. Primero,
+      identifícate con tu grupo y tu DNI o NIE.</p>
+
+    <div class="tarjeta-form">
+      <div class="pregunta">
+        <div class="que">1. ¿En qué grupo estás este curso? <span class="ob">*</span></div>
+        <div class="detalle">Comprueba el curso (1.º o 2.º) y el turno.</div>
+        <select id="en-grupo"></select>
+      </div>
+      <div class="pregunta">
+        <div class="que">2. Tu DNI o NIE <span class="ob">*</span></div>
+        <div class="detalle">Sin puntos, sin guiones y con la letra en mayúscula.
+          Ejemplo: <strong>12345678A</strong> o <strong>X1234567B</strong>.</div>
+        <input id="en-dni" placeholder="12345678A" autocomplete="off" autocapitalize="characters">
+      </div>
+      <div class="pregunta">
+        <button class="btn principal" onclick="entrar()">Ver las empresas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================= PREFERENCIAS ===== -->
+  <div id="ficha" class="oculto">
+    <h1>Elección de empresa para la FFEOE</h1>
+    <div class="identificado"><strong id="quien-nombre"></strong>
+      <div class="pie" id="quien-grupo"></div>
+      <div class="pie">Si no eres tú, <a href="#" onclick="volver(); return false;">vuelve atrás</a>.</div>
+    </div>
+
+    <div class="tarjeta-form oculto" id="t-preferencias">
+      <h2>Empresas de tu ciclo</h2>
+      <div class="pref-pestanas"><nav class="pestanas">
+        <button type="button" class="pest activa" id="pest-ordenar" onclick="verVistaPreferencias('ordenar')">Ordenar</button>
+        <button type="button" class="pest" id="pest-comparar" onclick="verVistaPreferencias('comparar')">Comparar condiciones</button>
+      </nav></div>
+      <!-- En las dos vistas: nada de lo que se ve aquí es definitivo. -->
+      <div class="aviso info"><span class="texto"><strong>Información orientativa.</strong> Los datos de cada empresa
+        (horario, condiciones de la estancia, requisitos, plazas e interés en contratar) son los que nos ha facilitado
+        hasta hoy y pueden cambiar: una empresa puede ajustar su horario o sus condiciones e, incluso, retirar alguna
+        plaza. Te sirven para orientar tu elección, pero no garantizan la plaza ni las condiciones finales. Si hay
+        cambios, el centro te informará.</span></div>
+      <div id="vista-ordenar">
+        <div class="detalle" id="pref-detalle"></div>
+        <div class="pref-sep">Tu orden</div>
+        <div class="pref-lista" id="pref-orden"></div>
+        <div class="pref-sep" id="pref-sep-resto"></div>
+        <div class="pref-lista" id="pref-resto"></div>
+      </div>
+      <div class="oculto" id="vista-comparar"></div>
+      <div class="barra-envio">
+        <button class="btn principal" id="btn-guardar-pref" onclick="guardarPreferencias()">Guardar mi orden</button>
+        <span class="pie" style="margin:0" id="pref-pie"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="mensaje" class="mensaje oculto"></div>
+</div>
+
+<script>
+var URL_SERVIDOR = "https://script.google.com/macros/s/AKfycbxmK_ygclO5mNRx0mhWIhzopRx2A1gPBefwuwM4K5NjC7yAnsCuAqJGRAFMJWmsKwOp/exec";
+var GRUPOS = null;
+var F = null;                       // lo que ha devuelto el servidor
+var CLAVE = null;                   // { idGrupo, dni } con lo que se entró
+var ORDEN = [];                     // ids de empresa en el orden del alumno
+
+function el(id) { return document.getElementById(id); }
+function esc(t) {
+  return String(t === null || t === undefined ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+/**
+ * Un texto como argumento, entre comillas simples, dentro del atributo de
+ * un manejador. esc() no basta: el navegador deshace &#39; antes de
+ * ejecutar el JS y la comilla cortaría la cadena (un nombre como «L'Oréal», o
+ * algo peor llegado de un formulario público). Se escapa primero para JS y
+ * luego para el atributo.
+ */
+function arg(t) {
+  return esc(String(t === null || t === undefined ? '' : t)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n'));
+}
+function ver(id, si) { el(id).className = el(id).className.replace(/\s*oculto/, '') + (si ? '' : ' oculto'); }
+function fecha(iso) { return iso ? iso.split('-').reverse().join('/') : ''; }
+
+var _t = null;
+function aviso(texto, error) {
+  var m = el('mensaje');
+  m.textContent = texto;
+  m.className = 'mensaje' + (error ? ' error' : '');
+  clearTimeout(_t);
+  _t = setTimeout(function () { m.className = 'mensaje oculto'; }, error ? 9000 : 3000);
+}
+
+function llamar(fn, args, ok, alFallar) {
+  var boton = document.activeElement;
+  var antes = boton && boton.tagName === 'BUTTON' ? boton.innerHTML : null;
+  if (antes !== null) { boton.disabled = true; boton.innerHTML = 'Cargando…'; }
+  function soltar() {
+    if (antes !== null && boton.parentNode) { boton.disabled = false; boton.innerHTML = antes; }
+  }
+  alServidor(fn, args, function (res) { soltar(); ok(res); }, function (e) {
+    soltar();
+    var texto = e && e.message ? e.message : String(e);
+    if (alFallar) alFallar(texto); else aviso(texto, true);
+  });
+}
+
+// ---------------------------------------------------------------- entrada
+document.addEventListener('DOMContentLoaded', function () {
+  // En Apps Script los grupos vienen en la página; en la copia de GitHub
+  // Pages (GRUPOS = null) se piden al servidor.
+  if (GRUPOS) pintarGrupos();
+  else llamar('apiGruposAlumnado', [], function (g) { GRUPOS = g; pintarGrupos(); });
+  el('en-dni').addEventListener('keydown', function (e) { if (e.key === 'Enter') entrar(); });
+});
+
+function pintarGrupos() {
+  el('en-grupo').innerHTML = '<option value="">— Elige tu grupo —</option>' + GRUPOS.map(function (g) {
+    return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + '</option>';
+  }).join('');
+}
+
+function entrar() {
+  var idGrupo = el('en-grupo').value, dni = el('en-dni').value.trim().toUpperCase();
+  if (!idGrupo) { aviso('Elige tu grupo', true); el('en-grupo').focus(); return; }
+  if (!dni) { aviso('Escribe tu DNI o NIE', true); el('en-dni').focus(); return; }
+  llamar('apiFormularioPreferenciasAbrir', [idGrupo, dni], function (f) {
+    F = f; CLAVE = { idGrupo: idGrupo, dni: dni };
+    pintarPreferencias();
+    ver('entrada', false); ver('ficha', true);
+    window.scrollTo(0, 0);
+  });
+}
+
+function volver() {
+  ver('ficha', false); ver('entrada', true); F = null; CLAVE = null;
+  window.scrollTo(0, 0);
+}
+
+// ----------------------------------------------------------- preferencias
+function pintarPreferencias() {
+  el('quien-nombre').textContent = F.nombre;
+  el('quien-grupo').textContent = F.grupo;
+  var p = F.preferencias || {};
+  ver('t-preferencias', true);
+  var hay = {};
+  p.empresas.forEach(function (e) { hay[e.id] = e; });
+  // Lo guardado, sin lo que ya no se ofrece (el servidor lo conserva aparte).
+  ORDEN = (p.orden || []).filter(function (id) { return hay[id]; });
+  var hasta = p.cierre ? p.cierre.split('-').reverse().join('/') : '';
+  el('pref-detalle').innerHTML = p.cerrada
+    ? 'La elección de empresa se cerró el ' + esc(hasta) + (ORDEN.length ? '. Esta es la lista que guardaste; ya no se puede cambiar.'
+      : ' y no ordenaste ninguna empresa. Si queda alguna plaza libre en una empresa sin requisitos, se te asignará por sorteo.')
+    : 'Ordena las ' + p.empresas.length + ' empresas de tu ciclo, de la que más te interesa ' +
+      'a la que menos. Toca una empresa de «Sin ordenar» para añadirla al final de tu lista, y usa las flechas para moverla.' +
+      (hasta ? ' Puedes cambiar tu orden hasta el <strong>' + esc(hasta) + '</strong>.' : '') +
+      '<br><strong>Ordena cuantas más mejor.</strong> Las plazas se reparten por la nota de asignación: si cuando te toque ' +
+      'no queda plaza en ninguna de tu lista, se te asignará por sorteo una plaza de una empresa que no pida requisitos, si queda alguna.';
+  el('btn-guardar-pref').classList.toggle('oculto', !!p.cerrada);
+  pintarListasPreferencias();
+}
+
+/** «Jornada continua · 8:00 a 14:00 (6 h al día)»: lo que se sabe del horario. */
+function jornadaEmpresa(e) {
+  var h = e.horario + (e.horas ? (e.horario ? ' (' : '') + e.horas + ' h al día' + (e.horario ? ')' : '') : '');
+  return [e.jornada ? 'Jornada ' + e.jornada.toLowerCase() : '', h].filter(Boolean).join(' · ');
+}
+
+function plazasEmpresa(e) { return e.plazas + (e.plazas === 1 ? ' plaza' : ' plazas'); }
+
+function marcasEmpresa(e) {
+  if (!e.paraTi && !e.contrata) return '';
+  return '<span class="pref-marcas">' +
+    (e.paraTi ? '<span class="para-ti">Plaza propuesta por la empresa para ti</span> ' : '') +
+    (e.contrata ? '<span class="et verde mini">Posibilidad de contratación</span>' : '') + '</span>';
+}
+
+function datosEmpresa(e) {
+  var lineas = [
+    [e.localidad, jornadaEmpresa(e), e.trabajo].filter(Boolean).join(' · '),
+    e.actividad,
+    [e.requisitos.length ? 'Pide: ' + e.requisitos.join(', ').toLowerCase() : '', plazasEmpresa(e)].filter(Boolean).join(' · ')
+  ].filter(Boolean);
+  return lineas.map(function (l) { return '<small>' + esc(l) + '</small>'; }).join('') + marcasEmpresa(e);
+}
+
+function verVistaPreferencias(cual) {
+  ver('vista-ordenar', cual === 'ordenar');
+  ver('vista-comparar', cual === 'comparar');
+  el('pest-ordenar').className = 'pest' + (cual === 'ordenar' ? ' activa' : '');
+  el('pest-comparar').className = 'pest' + (cual === 'comparar' ? ' activa' : '');
+  if (cual === 'comparar') pintarComparacion();
+}
+
+/** Todas las empresas del ciclo en una tabla, para comparar sus condiciones. */
+function pintarComparacion() {
+  var filas = F.preferencias.empresas.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+  el('vista-comparar').innerHTML = '<div class="tabla-caja pref-comparar"><table><thead><tr>' +
+    '<th>Empresa</th><th>Localidad y horario</th><th>Condiciones</th></tr></thead><tbody>' +
+    filas.map(function (e) {
+      return '<tr><td><strong>' + esc(e.nombre) + '</strong>' + (e.actividad ? '<small>' + esc(e.actividad) + '</small>' : '') + '</td>' +
+        '<td>' + esc(e.localidad || '—') + (jornadaEmpresa(e) ? '<small>' + esc(jornadaEmpresa(e)) + '</small>' : '') + '</td>' +
+        '<td>' + esc(plazasEmpresa(e)) + (e.trabajo ? '<small>' + esc(e.trabajo) + '</small>' : '') +
+        (e.requisitos.length ? '<small>Pide: ' + esc(e.requisitos.join(', ').toLowerCase()) + '</small>' : '') +
+        marcasEmpresa(e) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+function pintarListasPreferencias() {
+  var p = F.preferencias;
+  var hay = {};
+  p.empresas.forEach(function (e) { hay[e.id] = e; });
+  el('pref-orden').innerHTML = ORDEN.length ? ORDEN.map(function (id, i) {
+    var e = hay[id];
+    return '<div class="pref-emp"><span class="n">' + (i + 1) + '</span><div><div class="nom">' + esc(e.nombre) + '</div>' +
+      datosEmpresa(e) + '</div>' + (p.cerrada ? '<span></span>' : '<div class="pref-mover">' +
+      '<button type="button" title="Subir" onclick="moverPreferencia(' + i + ', -1)"' + (i ? '' : ' disabled') + '>▲</button>' +
+      '<button type="button" title="Bajar" onclick="moverPreferencia(' + i + ', 1)"' + (i < ORDEN.length - 1 ? '' : ' disabled') + '>▼</button>' +
+      '<button type="button" title="Quitar de mi lista" onclick="quitarPreferencia(' + i + ')">×</button></div>') + '</div>';
+  }).join('') : '<div class="pref-vacia">' + (p.cerrada ? 'No ordenaste ninguna.' : 'Todavía no has ordenado ninguna.') + '</div>';
+  // La plaza que la empresa propone para este alumno, la primera de las que quedan.
+  var resto = p.cerrada ? [] : p.empresas.filter(function (e) { return ORDEN.indexOf(e.id) === -1; })
+    .sort(function (a, b) { return (b.paraTi ? 1 : 0) - (a.paraTi ? 1 : 0); });
+  el('pref-sep-resto').textContent = resto.length ? 'Sin ordenar (' + resto.length + ')' : '';
+  el('pref-resto').innerHTML = resto.map(function (e) {
+    return '<button type="button" class="pref-emp" onclick="anadirPreferencia(\'' + arg(e.id) + '\')"><span class="n">+</span>' +
+      '<div><div class="nom">' + esc(e.nombre) + '</div>' + datosEmpresa(e) + '</div><span></span></button>';
+  }).join('');
+  el('pref-pie').textContent = 'Ordenadas ' + ORDEN.length + ' de ' + p.empresas.length +
+    (p.guardado ? ' · guardado el ' + fecha(p.guardado) : '');
+}
+
+function anadirPreferencia(id) { ORDEN.push(id); pintarListasPreferencias(); }
+function quitarPreferencia(i) { ORDEN.splice(i, 1); pintarListasPreferencias(); }
+function moverPreferencia(i, d) {
+  var j = i + d;
+  if (j < 0 || j >= ORDEN.length) return;
+  var x = ORDEN[i]; ORDEN[i] = ORDEN[j]; ORDEN[j] = x;
+  pintarListasPreferencias();
+}
+
+function guardarPreferencias() {
+  llamar('apiFormularioPreferenciasGuardar', [CLAVE.idGrupo, CLAVE.dni, ORDEN.slice()], function (r) {
+    F.preferencias.orden = ORDEN.slice();
+    F.preferencias.guardado = r.guardado;
+    pintarListasPreferencias();
+    aviso(r.ordenadas === r.total ? 'Orden guardado' : 'Orden guardado. Te quedan ' + (r.total - r.ordenadas) + ' empresas por ordenar');
+  });
+}
+</script>
+</body>
+</html>

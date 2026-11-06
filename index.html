@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FFEOE</title>
+  <script>
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var a = q.get('e') ? 'empresa.html' : q.get('v') ? 'valoracion.html' : q.get('a') ? 'alumnado.html' : q.get('p') ? 'eleccion.html' : '';
+    if (a) location.replace(a + location.search);
+  })();
+  </script>
+</head>
+<body style="font:16px/1.55 -apple-system,Segoe UI,Roboto,Arial;max-width:520px;margin:70px auto;padding:0 20px;color:#18201B">
+  <h1 style="font-size:21px;margin:0 0 10px">Este enlace no es válido</h1>
+  <p style="margin:0;color:#4B554E">Para acceder a los formularios es necesario el enlace personal enviado por el centro. Si no lo conserva, solicítelo de nuevo a la coordinación de FP dual.</p>
+</body>
+</html>
